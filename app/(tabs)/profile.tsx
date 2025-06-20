@@ -1,7 +1,7 @@
 import ItemCard from '@/components/ItemCard';
 import { images } from '@/constants';
 import { RootState } from '@/lib/store';
-import { useGetItemsQuery } from '@/lib/store/api/itemsApi';
+import { useDeleteItemMutation, useGetItemsQuery } from '@/lib/store/api/itemsApi';
 import { Item, User } from '@/types/auction';
 import { router } from 'expo-router';
 import { Heart, LogOut, Package, Settings } from 'lucide-react-native';
@@ -29,6 +29,9 @@ export default function ProfileScreen() {
     // load all items
     const { data: itemsRaw = [], isLoading: itemsLoading } = useGetItemsQuery();
 
+    // mutation hook for deleting
+    const [deleteItem, { isLoading: deleting }] = useDeleteItemMutation();
+
     // flatten EntityState or array → Item[]
     const items: Item[] = useMemo(() => {
         if (Array.isArray(itemsRaw)) return itemsRaw;
@@ -55,6 +58,29 @@ export default function ProfileScreen() {
 
     const handleItemPress = (id: string) =>
         router.push({ pathname: '/item/[id]', params: { id } });
+
+    const handleItemLongPress = (id: string) => {
+        Alert.alert(
+            'Delete Listing',
+            'Are you sure you want to delete this item?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteItem({ _id: id }).unwrap();
+                        } catch (err) {
+                            console.error('Delete failed', err);
+                            Alert.alert('Error', 'Could not delete item. Please try again.');
+                        }
+                    },
+                },
+            ],
+            { cancelable: true }
+        );
+    };
 
     const handleLogout = () => {
         Alert.alert(
@@ -104,6 +130,8 @@ export default function ProfileScreen() {
                         key={it._id}
                         item={it}
                         onPress={() => handleItemPress(it._id)}
+                        onLongPress={() => handleItemLongPress(it._id)}
+                        disabled={deleting}
                     />
                 ))}
             </View>

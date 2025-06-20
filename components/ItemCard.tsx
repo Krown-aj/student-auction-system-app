@@ -8,13 +8,15 @@ import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'rea
 interface ItemCardProps {
     item: Item;
     onPress: (itemId: string) => void;
+    onLongPress?: (itemId: string) => void;
     onFavorite?: (itemId: string) => void;
     isFavorite?: boolean;
+    disabled?: boolean;
 }
 
 const { width } = Dimensions.get('window');
 
-export default function ItemCard({ item, onPress, onFavorite, isFavorite = false }: ItemCardProps) {
+export default function ItemCard({ item, onPress, onLongPress, onFavorite, isFavorite = false, disabled }: ItemCardProps) {
     const timeLeft = formatDistanceToNow(new Date(item.enddate), { addSuffix: true });
     const isEnded = new Date(item.enddate) < new Date();
 
@@ -24,6 +26,8 @@ export default function ItemCard({ item, onPress, onFavorite, isFavorite = false
         <TouchableOpacity
             style={styles.container}
             onPress={() => onPress(item._id)}
+            onLongPress={onLongPress ? () => onLongPress(item._id) : undefined}
+            disabled={disabled}
             activeOpacity={0.9}
         >
             <View style={styles.imageContainer}>
