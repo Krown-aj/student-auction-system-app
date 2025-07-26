@@ -3,7 +3,7 @@ import { RootState } from '@/lib/store';
 import { useDeleteItemMutation, useGetItemsQuery } from '@/lib/store/api/itemsApi';
 import { Item } from '@/types/auction';
 import { router } from 'expo-router';
-import { ArrowLeft, Filter, Search, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, ListFilter as Filter, Search, Trash2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
     Alert,

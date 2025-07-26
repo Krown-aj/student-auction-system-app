@@ -1,7 +1,7 @@
 import { RootState } from '@/lib/store';
 import { useGetAnalyticsQuery } from '@/lib/store/api/adminApi';
 import { router } from 'expo-router';
-import { ArrowLeft, BarChart3, DollarSign, Package, TrendingDown, TrendingUp, Users } from 'lucide-react-native';
+import { ArrowLeft, ChartBar as BarChart3, DollarSign, Package, TrendingDown, TrendingUp, Users } from 'lucide-react-native';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
 

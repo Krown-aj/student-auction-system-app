@@ -3,7 +3,7 @@ import { RootState } from '@/lib/store';
 import { useGetUsersQuery, useUpdateUserStatusMutation } from '@/lib/store/api/adminApi';
 import { User } from '@/types/auction';
 import { router } from 'expo-router';
-import { ArrowLeft, Ban, CheckCircle, Search, Shield, User as UserIcon } from 'lucide-react-native';
+import { ArrowLeft, Ban, CircleCheck as CheckCircle, Search, Shield, User as UserIcon } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
     Alert,
