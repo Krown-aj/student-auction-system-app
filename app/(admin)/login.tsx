@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link, router } from 'expo-router';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { Eye, EyeOff, Lock, Shield, User } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
@@ -16,75 +16,89 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useDispatch } from 'react-redux';
+import { z } from 'zod';
 
 import { images } from '@/constants';
-import { loginSchema, type LoginFormData } from '@/lib/schemas';
-import { useLoginMutation } from '@/lib/store/api/authApi';
-import { setCredentials } from '@/lib/store/slice/authSlice';
+import { useAdminLoginMutation } from '@/lib/store/api/adminApi';
+import { setAdminCredentials } from '@/lib/store/slice/adminSlice';
 import { setSpinner } from '@/lib/store/slice/spinnerSlice';
-import { useDispatch } from 'react-redux';
 
-export default function LoginScreen() {
+const adminLoginSchema = z.object({
+    email: z.string().email('Invalid email address'),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    adminCode: z.string().min(4, 'Admin code is required'),
+});
+
+type AdminLoginFormData = z.infer<typeof adminLoginSchema>;
+
+export default function AdminLoginScreen() {
     const [showPassword, setShowPassword] = useState(false);
     const dispatch = useDispatch();
-    const [login] = useLoginMutation();
+    const [adminLogin] = useAdminLoginMutation();
 
     const {
         control,
         handleSubmit,
         formState: { errors, isSubmitting }
-    } = useForm<LoginFormData>({
-        resolver: zodResolver(loginSchema),
+    } = useForm<AdminLoginFormData>({
+        resolver: zodResolver(adminLoginSchema),
         defaultValues: {
             email: '',
-            password: ''
+            password: '',
+            adminCode: ''
         }
     });
 
-    const onSubmit = async (data: LoginFormData) => {
+    const onSubmit = async (data: AdminLoginFormData) => {
         let type = 'Error';
-        let text = 'Login failed. Please try again.';
+        let text = 'Admin login failed. Please check your credentials.';
         dispatch(setSpinner({ visibility: true }));
+        
         try {
-            const result = await login(data).unwrap();
-            const { status, user, accessToken, } = result;
+            const result = await adminLogin(data).unwrap();
+            const { status, user, accessToken } = result;
+            
             if (status === 'SUCCESS') {
-                dispatch(setCredentials({ token: accessToken, user: user }));
-                type = 'Success';
-                text = 'Welcome to Students Auction and Bidding System!';
+                // Verify admin role
+                if (user.roles.includes('Admin') || user.roles.includes('SuperAdmin')) {
+                    dispatch(setAdminCredentials({ token: accessToken, admin: user }));
+                    type = 'Success';
+                    text = 'Welcome to Admin Dashboard!';
+                } else {
+                    text = 'Access denied. Admin privileges required.';
+                }
             } else {
-                text = 'Login failed. Please try again.';
+                text = 'Invalid admin credentials. Please try again.';
             }
         } catch (error) {
-            //console.error('Authentication Error:', error)
             const err = error as { status?: string; data?: { message?: string } };
             if (err?.status === 'FETCH_ERROR') {
-                text = 'Network error, please check your network and try again';
+                text = 'Network error, please check your connection and try again';
             } else {
-                text = err.data?.message || 'An authentication error has occured!';
+                text = err.data?.message || 'Admin authentication failed!';
             }
         } finally {
             setTimeout(() => {
-                dispatch(setSpinner({ visibility: false }))
+                dispatch(setSpinner({ visibility: false }));
                 if (type === 'Success') {
                     Alert.alert(
-                        'Account Login',
+                        'Admin Access',
                         text,
                         [
                             {
                                 text: 'OK',
                                 onPress: () => {
-                                    router.replace('/(tabs)');
-
+                                    router.replace('/(admin)/dashboard');
                                 },
                             },
                         ],
                         { cancelable: false }
-                    )
+                    );
                 } else {
-                    Alert.alert('Account Login', text)
+                    Alert.alert('Admin Access', text);
                 }
-            }, 1000)
+            }, 1000);
         }
     };
 
@@ -94,30 +108,28 @@ export default function LoginScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
             <LinearGradient
-                colors={['#6366F1', '#4F46E5']}
+                colors={['#DC2626', '#B91C1C']}
                 style={styles.gradient}
             >
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
                     <View style={styles.container}>
                         <View style={styles.logoContainer}>
-                            <Image
-                                source={images.logo}
-                                resizeMode="cover"
-                                style={styles.logoImage}
-                            />
-                            <Text style={styles.logoText}>Students Auction</Text>
+                            <View style={styles.adminIconContainer}>
+                                <Shield size={60} color="#FFFFFF" />
+                            </View>
+                            <Text style={styles.logoText}>Admin Portal</Text>
                             <Text style={styles.tagline}>
-                                Federal University Lafia
+                                Secure Administrative Access
                             </Text>
                             <Text style={styles.tagline}>
-                                Buy and sell within your college community
+                                Students Auction System
                             </Text>
                         </View>
 
                         <View style={styles.formContainer}>
-                            <Text style={styles.welcomeText}>Welcome Back</Text>
+                            <Text style={styles.welcomeText}>Admin Login</Text>
                             <Text style={styles.subtitleText}>
-                                Sign in to your account
+                                Enter your administrative credentials
                             </Text>
 
                             <Controller
@@ -126,7 +138,7 @@ export default function LoginScreen() {
                                 render={({ field: { onChange, value } }) => (
                                     <View style={styles.inputContainer}>
                                         <View style={styles.textInputContainer}>
-                                            <Mail
+                                            <User
                                                 size={20}
                                                 strokeWidth={2}
                                                 stroke="#6B7280"
@@ -134,7 +146,7 @@ export default function LoginScreen() {
                                             />
                                             <TextInput
                                                 style={styles.input}
-                                                placeholder="Email"
+                                                placeholder="Admin Email"
                                                 placeholderTextColor="#9CA3AF"
                                                 value={value}
                                                 onChangeText={onChange}
@@ -191,11 +203,35 @@ export default function LoginScreen() {
                                 )}
                             />
 
-                            <TouchableOpacity style={styles.forgotPasswordContainer}>
-                                <Text style={styles.forgotPasswordText}>
-                                    Forgot Password?
-                                </Text>
-                            </TouchableOpacity>
+                            <Controller
+                                control={control}
+                                name="adminCode"
+                                render={({ field: { onChange, value } }) => (
+                                    <View style={styles.inputContainer}>
+                                        <View style={styles.textInputContainer}>
+                                            <Shield
+                                                size={20}
+                                                strokeWidth={2}
+                                                stroke="#6B7280"
+                                                style={styles.inputIcon}
+                                            />
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="Admin Access Code"
+                                                placeholderTextColor="#9CA3AF"
+                                                value={value}
+                                                onChangeText={onChange}
+                                                secureTextEntry
+                                            />
+                                        </View>
+                                        {errors.adminCode && (
+                                            <Text style={styles.fieldError}>
+                                                {errors.adminCode.message}
+                                            </Text>
+                                        )}
+                                    </View>
+                                )}
+                            />
 
                             <TouchableOpacity
                                 style={[
@@ -206,27 +242,17 @@ export default function LoginScreen() {
                                 disabled={isSubmitting}
                             >
                                 <Text style={styles.loginButtonText}>
-                                    {isSubmitting ? 'Signing in...' : 'Sign In'}
+                                    {isSubmitting ? 'Authenticating...' : 'Access Admin Panel'}
                                 </Text>
                             </TouchableOpacity>
 
-                            <View style={styles.signupContainer}>
-                                <Text style={styles.signupText}>
-                                    Don't have an account?{' '}
-                                </Text>
-                                <Link href="/signup" asChild>
-                                    <TouchableOpacity>
-                                        <Text style={styles.signupLink}>Sign up</Text>
-                                    </TouchableOpacity>
-                                </Link>
-                            </View>
+                            <TouchableOpacity
+                                style={styles.backButton}
+                                onPress={() => router.back()}
+                            >
+                                <Text style={styles.backButtonText}>Back to Student Portal</Text>
+                            </TouchableOpacity>
                         </View>
-                    </View>
-
-                    <View style={styles.adminContainer}>
-                        <TouchableOpacity onPress={() => router.push('/(admin)/login')}>
-                            <Text style={styles.adminLink}>Admin Access</Text>
-                        </TouchableOpacity>
                     </View>
                 </ScrollView>
             </LinearGradient>
@@ -249,25 +275,28 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 60,
         marginBottom: 40,
-        overflow: 'hidden'
     },
-    logoImage: {
-        width: 80,
-        height: 80,
-        borderRadius: 40
+    adminIconContainer: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
     },
     logoText: {
         fontFamily: 'Inter-Bold',
         fontSize: 28,
         color: '#FFFFFF',
-        marginTop: 16
+        marginBottom: 8,
     },
     tagline: {
         fontFamily: 'Inter-Regular',
         fontSize: 16,
         color: 'rgba(255, 255, 255, 0.8)',
         textAlign: 'center',
-        marginTop: 8
+        marginTop: 4,
     },
     formContainer: {
         backgroundColor: '#FFFFFF',
@@ -283,7 +312,8 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter-Bold',
         fontSize: 24,
         color: '#1F2937',
-        marginBottom: 8
+        marginBottom: 8,
+        textAlign: 'center',
     },
     subtitleText: {
         fontFamily: 'Inter-Regular',
@@ -291,17 +321,6 @@ const styles = StyleSheet.create({
         color: '#6B7280',
         marginBottom: 24,
         textAlign: 'center'
-    },
-    errorContainer: {
-        backgroundColor: '#FEE2E2',
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 16
-    },
-    errorText: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 14,
-        color: '#B91C1C'
     },
     inputContainer: {
         marginBottom: 16
@@ -333,17 +352,8 @@ const styles = StyleSheet.create({
         marginTop: 4,
         marginLeft: 12
     },
-    forgotPasswordContainer: {
-        alignItems: 'flex-end',
-        marginBottom: 24
-    },
-    forgotPasswordText: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 14,
-        color: '#6366F1'
-    },
     loginButton: {
-        backgroundColor: '#6366F1',
+        backgroundColor: '#DC2626',
         borderRadius: 12,
         paddingVertical: 16,
         alignItems: 'center',
@@ -357,30 +367,13 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#FFFFFF'
     },
-    signupContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center'
-    },
-    signupText: {
-        fontFamily: 'Inter-Regular',
-        fontSize: 14,
-        color: '#6B7280'
-    },
-    signupLink: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 14,
-        color: '#6366F1'
-    },
-    adminContainer: {
+    backButton: {
         alignItems: 'center',
-        marginTop: 20,
-        paddingTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
+        paddingVertical: 12,
     },
-    adminLink: {
+    backButtonText: {
         fontFamily: 'Inter-Medium',
         fontSize: 14,
-        color: '#DC2626',
+        color: '#6B7280',
     },
 });
